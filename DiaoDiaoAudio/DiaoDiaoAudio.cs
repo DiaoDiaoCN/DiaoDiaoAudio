@@ -26,21 +26,5 @@ namespace PluginApiAudio
 
         [PluginConfig]
         public DiaoDiaoAudioConfig DiaoDiaoConfig;
-
-        [PluginEvent(ServerEventType.WaitingForPlayers)]
-        public void aa()
-        {
-            Timing.RunCoroutine(test());
-        }
-
-        IEnumerator<float> test()
-        {
-            while (true)
-            {
-                Log.Info(Player.GetPlayers().Count.ToString());
-                Log.Info(AudioPlayerBase.AudioPlayers.Count.ToString());
-                yield return Timing.WaitForSeconds(1f);
-            }
-        }
     }
 }
