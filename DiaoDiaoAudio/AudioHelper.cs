@@ -11,6 +11,7 @@ using Mirror;
 using CommandSystem;
 using System.Xml.Linq;
 using UnityEngine;
+using YamlDotNet.Core.Tokens;
 
 namespace PluginApiAudio
 {
@@ -64,10 +65,10 @@ namespace PluginApiAudio
         /// <param name="AudioPath">文件路径</param>
         /// <param name="hub">播放人</param>
         /// <param name="To">目标，不设置就是全员收听</param>
-        public static AudioPlayerBase PlayAudio(this Player player, string _AudioFile, bool Loop = false, int Volume = 80)
+        public static AudioPlayerBase PlayAudio(this Player player, string _AudioFile, bool Loop = false, int Volume = 80, bool AutoClear = true)
         {
             //播放
-            return Play(_AudioFile, new List<int>() { player.PlayerId }, Loop, Volume);
+            return Play(_AudioFile, new List<int>() { player.PlayerId }, Loop, Volume, AutoClear);
         }
 
         /// <summary>
@@ -77,7 +78,7 @@ namespace PluginApiAudio
         /// <param name="AudioPath">文件路径</param>
         /// <param name="hub">播放人</param>
         /// <param name="To">目标，不设置就是全员收听</param>
-        public static AudioPlayerBase PlayAudio(this Player player, string _AudioFile, float distance, bool Loop = false, int Volume = 80)
+        public static AudioPlayerBase PlayAudio(this Player player, string _AudioFile, float distance, bool Loop = false, int Volume = 80, bool AutoClear = true)
         {
             var playerids = new List<int>();
             foreach (var p in Player.GetPlayers().Where(p => UnityEngine.Vector3.Distance(p.Position, player.Position) <= distance))
@@ -85,7 +86,7 @@ namespace PluginApiAudio
                 playerids.Add(p.PlayerId);
             }
             //播放
-            return Play(_AudioFile, playerids, Loop, Volume);
+            return Play(_AudioFile, playerids, Loop, Volume, AutoClear);
         }
 
         /// <summary>
@@ -94,16 +95,35 @@ namespace PluginApiAudio
         /// <param name="AudioPath">文件路径</param>
         /// <param name="hub">播放人</param>
         /// <param name="To">目标，不设置就是全员收听</param>
-        public static AudioPlayerBase Play(string _AudioFile, List<int> To = null, bool Loop = false, int Volume = 80)
+        public static AudioPlayerBase Play(string _AudioFile, List<int> To = null, bool Loop = false, int Volume = 80, bool AutoClear = true)
         {
             //收听人
             if (To == null)
                 To = Player.GetPlayers().Select(p => p.PlayerId).ToList();
             //播放
-            return _Play(_AudioFile, To, Loop, Volume);
+            return _Play(_AudioFile, To, Loop, Volume, AutoClear);
         }
 
-        private static AudioPlayerBase _Play(string _AudioFile, List<int> To, bool Loop, int Volume = 80)
+        /// <summary>
+        /// 播放音效
+        /// </summary>
+        /// <param name="AudioPath">文件路径</param>
+        /// <param name="hub">播放人</param>
+        /// <param name="To">目标，不设置就是全员收听</param>
+        public static void Play(this AudioPlayerBase audtioPlayer, string _AudioFile, bool AutoClear = true)
+        {
+            var AudioFile = Path.Combine(AudioPath, _AudioFile + ".ogg");
+            if (!File.Exists(AudioFile))
+            {
+                Log.Error("音频文件不存在：" + AudioFile);
+                return;
+            }
+            audtioPlayer.AutoClear = AutoClear;
+            audtioPlayer.Enqueue(AudioFile, -1);//播放文件
+            audtioPlayer.Play(0);
+        }
+
+        private static AudioPlayerBase _Play(string _AudioFile, List<int> To, bool Loop, int Volume = 80, bool AutoClear = true)
         {
             if (DiaoDiaoAudio.Singleton.DiaoDiaoConfig.EnableAudio)
             {
@@ -127,6 +147,7 @@ namespace PluginApiAudio
                     //播放器
                     audtioPlayer = AudioPlayerBase.Get(hubPlayer);
                 }
+                audtioPlayer.AutoClear = AutoClear;
                 audtioPlayer.Enqueue(AudioFile, -1);//播放文件
                 if (To != null)
                     audtioPlayer.BroadcastTo.AddRange(To);//收听方，不设置就是全员收听
@@ -165,7 +186,7 @@ namespace PluginApiAudio
         /// </summary>
         public static bool GetNoPlayRob(out AudioPlayerBase _ad)
         {
-            if (AudioPlayerBase.AudioPlayers.Count(p => p.Value.IsFinish ) > 0)
+            if (AudioPlayerBase.AudioPlayers.Count(p => p.Value.IsFinish) > 0)
             {
                 _ad = AudioPlayerBase.AudioPlayers.First(p => p.Value.IsFinish).Value;
                 return true;
